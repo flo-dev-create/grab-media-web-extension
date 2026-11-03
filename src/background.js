@@ -27,7 +27,7 @@ function collectMedia() {
       return;
     }
     if (!/^(https?|data|file|ftp):/i.test(url)) return; // blob:, javascript:, etc. exclus
-    const type = guessType(url, fallbackType);
+    const type = fallbackType === "embed" ? "embed" : guessType(url, fallbackType);
     const prev = found.get(url);
     if (prev) {
       Object.assign(prev, { width: prev.width || extra.width, height: prev.height || extra.height });
@@ -91,8 +91,37 @@ function collectMedia() {
       if (type) add(u, type);
     });
 
+    root.querySelectorAll("iframe[src], iframe[data-src]").forEach((f) => {
+      add(f.getAttribute("src") || f.getAttribute("data-src"), "embed");
+    });
+
     root.querySelectorAll("*").forEach((el) => {
       if (el.shadowRoot) walk(el.shadowRoot);
+      // Attributs contenant du HTML (ex. data-html="<iframe …>") ou une URL média directe
+      for (const attr of el.attributes) {
+        const val = attr.value;
+        if (!val || val.length < 8) continue;
+        if (/<(iframe|video|audio|source|img|embed)\b/i.test(val)) {
+          try {
+            const doc = new DOMParser().parseFromString(val, "text/html");
+            doc.querySelectorAll("iframe[src], embed[src]").forEach((f) => add(f.getAttribute("src"), "embed"));
+            doc.querySelectorAll("video").forEach((v) => {
+              add(v.getAttribute("src"), "video");
+              add(v.getAttribute("poster"), "image");
+            });
+            doc.querySelectorAll("audio").forEach((a) => add(a.getAttribute("src"), "audio"));
+            doc.querySelectorAll("source").forEach((s) => {
+              add(s.getAttribute("src"), s.parentElement?.tagName === "AUDIO" ? "audio" : "video");
+            });
+            doc.querySelectorAll("img").forEach((i) => add(i.getAttribute("src"), "image"));
+          } catch {}
+        } else if (
+          !/^(src|href|style|srcset)$/i.test(attr.name) &&
+          /^[^\s"'<>]+\.(png|jpe?g|gif|webp|avif|svg|mp4|webm|mov|m4v|mkv|ogv|mp3|wav|ogg|m4a|aac|flac|opus)(\?[^\s"'<>]*)?$/i.test(val)
+        ) {
+          add(val, null);
+        }
+      }
       const bg = getComputedStyle(el).backgroundImage;
       if (bg && bg !== "none") {
         for (const m of bg.matchAll(/url\((['"]?)(.*?)\1\)/g)) add(m[2], "image");

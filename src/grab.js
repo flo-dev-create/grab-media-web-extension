@@ -2,7 +2,7 @@ const api = globalThis.browser ?? chrome;
 
 const $ = (id) => document.getElementById(id);
 const grid = $("grid");
-const TYPES = ["image", "video", "audio"];
+const TYPES = ["image", "video", "audio", "embed"];
 
 let items = [];
 let pageTitle = "page";
@@ -26,9 +26,79 @@ async function init() {
   if (data.error) showEmpty(`Impossible d'analyser cette page : ${data.error}`);
   else if (!items.length) showEmpty("Aucun média trouvé sur cette page.");
 
-  for (const t of TYPES) $(`c-${t}`).textContent = `(${items.filter((i) => i.type === t).length})`;
   items.forEach(buildCard);
   applyFilters();
+  await resolveEmbeds();
+}
+
+function updateTypeCounts() {
+  for (const t of TYPES) {
+    const n = [...cards.values()].filter((c) => c.item.type === t).length;
+    $(`c-${t}`).textContent = `(${n})`;
+  }
+}
+
+// ---------- Résolution des embeds (iframes) vers les fichiers vidéo/audio réels ----------
+const MEDIA_RE = /https?:\/\/[^\s"'<>\\()]+?\.(?:mp4|webm|mov|m4v|ogv|mp3|m4a|ogg|wav)(?:\?[^\s"'<>\\()]*)?/gi;
+
+async function resolveEmbed(embedUrl) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 12000);
+  try {
+    const res = await fetch(embedUrl, { signal: ctrl.signal, credentials: "include" });
+    if (!res.ok) return [];
+    const type = res.headers.get("content-type") || "";
+    if (/^(video|audio)\//i.test(type)) return [{ url: res.url || embedUrl, type: type.startsWith("audio") ? "audio" : "video" }];
+    const text = (await res.text()).split(String.fromCharCode(92) + "/").join("/").split(String.fromCharCode(92) + "u0026").join("&").replace(/&amp;/g, "&").replace(/\u0026/g, "&");
+    const out = new Map();
+    const push = (u) => {
+      try {
+        const abs = new URL(u, embedUrl).href;
+        if (/^https?:/i.test(abs)) out.set(abs, { url: abs, type: /\.(mp3|m4a|ogg|wav)(\?|$)/i.test(abs) ? "audio" : "video" });
+      } catch {}
+    };
+    for (const m of text.matchAll(MEDIA_RE)) push(m[0]);
+    const doc = new DOMParser().parseFromString(text, "text/html");
+    doc.querySelectorAll("video[src], video source[src], audio[src], audio source[src]").forEach((e) => push(e.getAttribute("src")));
+    doc.querySelectorAll('meta[property^="og:video"], meta[property="og:audio"]').forEach((m) => {
+      if (/\.(mp4|webm|mov|m4v|mp3)(\?|$)/i.test(m.content)) push(m.content);
+    });
+    return [...out.values()];
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function resolveEmbeds() {
+  const embeds = items.filter((i) => i.type === "embed");
+  if (!embeds.length) return;
+  const info = $("page-info");
+  const base = info.textContent;
+  let done = 0;
+  const queue = [...embeds];
+  const worker = async () => {
+    while (queue.length) {
+      const embed = queue.shift();
+      info.textContent = `Analyse des iframes (${done}/${embeds.length})… — ${base}`;
+      const found = await resolveEmbed(embed.url);
+      done++;
+      if (found.length) {
+        cards.get(embed.url)?.el.remove();
+        cards.delete(embed.url);
+        for (const f of found) {
+          if (cards.has(f.url)) continue;
+          const item = { ...f, from: embed.url };
+          items.push(item);
+          buildCard(item);
+        }
+      }
+      applyFilters();
+    }
+  };
+  await Promise.all(Array.from({ length: 3 }, worker));
+  info.textContent = base;
 }
 
 function showEmpty(msg) {
@@ -50,6 +120,8 @@ function buildCard(item) {
 
   const thumb = document.createElement("div");
   thumb.className = "thumb";
+  const isEmbed = item.type === "embed";
+  if (isEmbed) cb.hidden = true;
   const meta = document.createElement("div");
   meta.className = "meta";
   meta.textContent = item.width && item.height ? `${item.width}×${item.height}` : "";
@@ -83,6 +155,8 @@ function buildCard(item) {
     };
     v.onclick = (e) => e.stopPropagation();
     thumb.append(v);
+  } else if (isEmbed) {
+    thumb.innerHTML = '<span class="ph">Iframe — aucun fichier direct trouvé</span>';
   } else {
     const a = document.createElement("audio");
     a.src = item.url;
@@ -101,7 +175,16 @@ function buildCard(item) {
   info.append(name, meta);
 
   el.append(cb, badge, thumb, info);
+  if (isEmbed) {
+    const link = document.createElement("a");
+    link.href = item.url;
+    link.target = "_blank";
+    link.rel = "noreferrer";
+    link.textContent = "Ouvrir la page";
+    info.append(link);
+  }
   el.addEventListener("click", (e) => {
+    if (isEmbed) return;
     if (e.target !== cb) cb.checked = !cb.checked;
     setSelected(item.url, cb.checked);
   });
@@ -136,6 +219,7 @@ function isVisible({ item }) {
 
 function applyFilters() {
   for (const c of cards.values()) c.el.hidden = !isVisible(c);
+  updateTypeCounts();
   updateCount();
 }
 
@@ -143,7 +227,7 @@ function visibleUrls() {
   return [...cards.values()].filter((c) => !c.el.hidden).map((c) => c.item.url);
 }
 
-["f-image", "f-video", "f-audio"].forEach((id) => $(id).addEventListener("change", applyFilters));
+["f-image", "f-video", "f-audio", "f-embed"].forEach((id) => $(id).addEventListener("change", applyFilters));
 $("search").addEventListener("input", applyFilters);
 $("minsize").addEventListener("input", applyFilters);
 $("select-all").addEventListener("click", () => visibleUrls().forEach((u) => setSelected(u, true)));
