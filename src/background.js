@@ -145,6 +145,49 @@ function collectMedia() {
   return Array.from(found.values());
 }
 
+
+// ---------- Détection réseau : flux média réellement chargés par la page (lecteurs, iframes…) ----------
+const NET_MEDIA_EXT = /\.(mp4|webm|mov|m4v|mkv|ogv|mp3|m4a|ogg|wav|flac|aac|opus|m3u8)(\?|#|$)/i;
+const NET_SKIP_TYPES = new Set(["image", "stylesheet", "font", "script", "main_frame", "sub_frame", "ping", "csp_report"]);
+let netChain = Promise.resolve();
+
+function recordNet(tabId, item) {
+  netChain = netChain
+    .then(async () => {
+      const key = `net_${tabId}`;
+      const list = (await api.storage.session.get(key))[key] || [];
+      if (list.some((i) => i.url === item.url) || list.length >= 200) return;
+      list.push(item);
+      await api.storage.session.set({ [key]: list });
+    })
+    .catch(() => {});
+}
+
+api.webRequest.onBeforeRequest.addListener(
+  (details) => {
+    if (details.tabId >= 0) netChain = netChain.then(() => api.storage.session.remove(`net_${details.tabId}`)).catch(() => {});
+  },
+  { urls: ["<all_urls>"], types: ["main_frame"] }
+);
+
+api.webRequest.onHeadersReceived.addListener(
+  (details) => {
+    if (details.tabId < 0 || NET_SKIP_TYPES.has(details.type) || details.statusCode >= 400) return;
+    const ctype = (details.responseHeaders || []).find((h) => h.name.toLowerCase() === "content-type")?.value || "";
+    if (/mp2t/i.test(ctype)) return; // segments HLS
+    const byType = /^(video|audio)\//i.test(ctype) || /mpegurl/i.test(ctype);
+    if (!byType && !NET_MEDIA_EXT.test(details.url.split("?")[0] + (details.url.includes("?") ? "?" : ""))) return;
+    if (/\.(ts|m4s)(\?|$)/i.test(details.url)) return;
+    recordNet(details.tabId, { url: details.url, type: /^audio\//i.test(ctype) || /\.(mp3|m4a|ogg|wav|flac|aac|opus)(\?|$)/i.test(details.url) ? "audio" : "video", net: true });
+  },
+  { urls: ["<all_urls>"] },
+  ["responseHeaders"]
+);
+
+api.tabs.onRemoved.addListener((tabId) => {
+  api.storage.session.remove(`net_${tabId}`).catch(() => {});
+});
+
 async function grab(tab) {
   let items = [];
   let error = null;
@@ -161,6 +204,15 @@ async function grab(tab) {
   } catch (e) {
     error = String(e?.message || e);
   }
+
+  // Flux détectés sur le réseau (lecteurs vidéo, iframes) : à fusionner avec la détection DOM
+  try {
+    const key = `net_${tab.id}`;
+    const netItems = (await api.storage.session.get(key))[key] || [];
+    const known = new Set(items.map((i) => i.url));
+    for (const n of netItems) if (!known.has(n.url)) items.push(n);
+    if (netItems.length) error = null;
+  } catch {}
 
   const id = `${Date.now()}`;
   await api.storage.local.set({

@@ -12,6 +12,13 @@ Extension **Chrome** et **Firefox** (Manifest V3) qui récupère tous les média
 
 Cliquez sur l'icône de l'extension sur la page à analyser → une fenêtre s'ouvre avec tous les médias trouvés.
 
+## Détection avancée
+
+- **Iframes / embeds** : l'URL de l'iframe (même cachée dans un attribut `data-html`) est ouverte en arrière-plan ; l'extension y cherche les fichiers (`<video>`, `<source>`, JSON, scripts « packés », base64, iframes imbriquées).
+- **Flux réseau** : les requêtes média (mp4, m3u8, audio…) réellement faites par la page sont mémorisées. Si un lecteur reste « non résolu », lancez la lecture de la vidéo dans la page puis cliquez à nouveau sur l'extension.
+- **HLS (.m3u8)** : segments assemblés en un seul fichier `.ts` (écriture directe sur disque dans Chrome/Edge, via Blob dans Firefox). Un site qui refuse les segments (HTTP 403) est signalé clairement.
+- **Gros fichiers** (> 100 Mo) : en mode ZIP, ils sont téléchargés à part par le navigateur plutôt que chargés en mémoire.
+
 ## Installation
 
 Téléchargez les paquets depuis les [Releases](../../releases).
