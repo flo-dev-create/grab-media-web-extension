@@ -5,7 +5,7 @@ function collectMedia() {
   const found = new Map();
   const EXT = {
     image: /\.(png|jpe?g|gif|webp|avif|bmp|svg|ico|tiff?)$/i,
-    video: /\.(mp4|webm|mov|m4v|mkv|ogv|avi)$/i,
+    video: /\.(mp4|webm|mov|m4v|mkv|ogv|avi|m3u8)$/i,
     audio: /\.(mp3|wav|ogg|oga|m4a|aac|flac|opus)$/i,
   };
 
@@ -117,7 +117,7 @@ function collectMedia() {
           } catch {}
         } else if (
           !/^(src|href|style|srcset)$/i.test(attr.name) &&
-          /^[^\s"'<>]+\.(png|jpe?g|gif|webp|avif|svg|mp4|webm|mov|m4v|mkv|ogv|mp3|wav|ogg|m4a|aac|flac|opus)(\?[^\s"'<>]*)?$/i.test(val)
+          /^[^\s"'<>]+\.(png|jpe?g|gif|webp|avif|svg|mp4|webm|mov|m4v|mkv|ogv|m3u8|mp3|wav|ogg|m4a|aac|flac|opus)(\?[^\s"'<>]*)?$/i.test(val)
         ) {
           add(val, null);
         }

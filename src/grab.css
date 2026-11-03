@@ -52,3 +52,4 @@ main { padding: 16px; }
 .card .meta { color: var(--muted); }
 .card input[type="checkbox"] { position: absolute; top: 8px; left: 8px; width: 18px; height: 18px; z-index: 2; }
 .badge { position: absolute; top: 8px; right: 8px; background: #000a; color: #fff; font-size: 10px; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; z-index: 2; }
+[hidden] { display: none !important; }
