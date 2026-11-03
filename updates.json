@@ -6,6 +6,11 @@
           "version": "1.2.1",
           "update_link": "https://github.com/flo-dev-create/grab-media-web-extension/releases/download/v1.2.1/grab-media-firefox-v1.2.1.xpi",
           "update_hash": "sha256:5029e86bf7093cc60369f0458a04688a2439a3b99bd5db051bd7404a795f24dc"
+        },
+        {
+          "version": "1.2.2",
+          "update_link": "https://github.com/flo-dev-create/grab-media-web-extension/releases/download/v1.2.2/grab-media-firefox-v1.2.2.xpi",
+          "update_hash": "sha256:59ffd043018f6bdea20d8a3d8714c79347f5e357f4bdfcbd17d7d32be27fc835"
         }
       ]
     }
