@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Grab Media</title>
+    <link rel="stylesheet" href="grab.css" />
+  </head>
+  <body>
+    <header>
+      <div class="title">
+        <h1>Grab Media</h1>
+        <p id="page-info"></p>
+      </div>
+      <div class="toolbar">
+        <label class="chip"><input type="checkbox" id="f-image" checked /> Images <span id="c-image"></span></label>
+        <label class="chip"><input type="checkbox" id="f-video" checked /> Vidéos <span id="c-video"></span></label>
+        <label class="chip"><input type="checkbox" id="f-audio" checked /> Audios <span id="c-audio"></span></label>
+        <input type="search" id="search" placeholder="Filtrer par URL…" />
+        <label class="minsize">Taille min. <input type="number" id="minsize" min="0" step="50" value="0" /> px</label>
+      </div>
+      <div class="actions">
+        <button id="select-all">Tout sélectionner</button>
+        <button id="select-none">Tout désélectionner</button>
+        <span id="selected-count"></span>
+        <span class="spacer"></span>
+        <button id="dl-separate" class="secondary">Télécharger séparément</button>
+        <button id="dl-zip" class="primary">Télécharger en ZIP</button>
+      </div>
+      <div id="progress" hidden><div id="progress-bar"></div><span id="progress-text"></span></div>
+    </header>
+    <main>
+      <p id="empty" hidden></p>
+      <div id="grid"></div>
+    </main>
+    <script src="grab.js"></script>
+  </body>
+</html>
