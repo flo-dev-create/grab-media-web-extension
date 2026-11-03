@@ -392,10 +392,15 @@ async function fetchRetry(url, kind, tries = 3) {
   for (let t = 0; t < tries; t++) {
     try {
       const res = await fetch(url, { credentials: "omit", referrerPolicy: "no-referrer" });
-      if (!res.ok) throw new Error("HTTP " + res.status);
+      if (!res.ok) {
+        const e = new Error("HTTP " + res.status);
+        e.status = res.status;
+        throw e;
+      }
       return kind === "text" ? await res.text() : await res.arrayBuffer();
     } catch (e) {
       err = e;
+      if ([401, 403, 404, 410].includes(e.status)) break; // inutile de réessayer
       await new Promise((r) => setTimeout(r, 500 * (t + 1)));
     }
   }
@@ -472,7 +477,19 @@ async function downloadHls(playlistUrl, onProgress) {
     while (next < segments.length) {
       const i = next++;
       const seg = segments[i];
-      let buf = await fetchRetry(seg.url, "buf");
+      let buf;
+      try {
+        buf = await fetchRetry(seg.url, "buf");
+      } catch (e) {
+        next = segments.length; // arrête les autres téléchargements
+        if (e.status === 401 || e.status === 403) {
+          throw new Error(
+            `le serveur refuse l'accès au segment ${i + 1} (HTTP ${e.status}) alors que ${done} segment(s) sur ${segments.length} ont été récupérés. ` +
+              "Ce site limite l'accès à ce flux : téléchargement impossible."
+          );
+        }
+        throw new Error(`échec du segment ${i + 1} sur ${segments.length} (${e.message || e})`);
+      }
       if (seg.key) {
         const iv = new Uint8Array(16);
         if (seg.key.iv) {

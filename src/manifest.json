@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Grab Media",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Récupère tous les médias (images, vidéos, audios) d'une page et permet de les télécharger en une fois.",
   "permissions": ["activeTab", "scripting", "downloads", "storage"],
   "host_permissions": ["<all_urls>"],
@@ -28,6 +28,7 @@
     "gecko": {
       "id": "grab-media@flo-dev-create.github.io",
       "strict_min_version": "140.0",
+      "update_url": "https://raw.githubusercontent.com/flo-dev-create/grab-media-web-extension/main/updates.json",
       "data_collection_permissions": { "required": ["none"] }
     }
   }

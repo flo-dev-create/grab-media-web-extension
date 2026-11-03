@@ -43,3 +43,7 @@ Les sources sont dans `src/`. Le manifest source contient les clés des deux nav
 ## Limites
 
 Les URLs `blob:` (flux MSE/streaming) ne sont pas téléchargeables par l'extension.
+
+## Mises à jour automatiques Firefox (distribution non listée)
+
+Le manifest Firefox contient `update_url` → `updates.json` (à la racine de `main`, servi par `raw.githubusercontent.com`). À chaque release **signée**, le workflow ajoute la nouvelle version (lien du `.xpi` + hash SHA-256) dans `updates.json`, et Firefox met l'extension à jour tout seul. Cela suppose que le dépôt soit **public** : un dépôt privé ne peut pas être lu par le navigateur.
