@@ -1,6 +1,6 @@
 // Construit les paquets Chrome et Firefox dans dist/ (sans dépendance externe).
 // Usage : node scripts/build.mjs
-import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -31,15 +31,20 @@ for (const [name, transform] of Object.entries(variants)) {
   cpSync(src, out, { recursive: true });
   writeFileSync(join(out, "manifest.json"), JSON.stringify(transform(structuredClone(manifest)), null, 2));
 
-  const zip = join(dist, `grab-media-${name}-v${version}.zip`);
+  // Firefox : .xpi (un zip renommé) ; Chrome : .zip à décompresser puis « Charger l'extension non empaquetée »
+  const base = join(dist, `grab-media-${name}-v${version}`);
+  const tmpZip = `${base}.zip`;
   if (process.platform === "win32") {
-    execFileSync(
-      "powershell",
-      ["-NoProfile", "-Command", `Compress-Archive -Path '${out}\\*' -DestinationPath '${zip}' -Force`],
-      { stdio: "inherit" }
-    );
+    // bsdtar (inclus dans Windows 10+) produit un zip standard avec des chemins en "/"
+    const bsdtar = join(process.env.SystemRoot || "C:\\Windows", "System32", "tar.exe");
+    execFileSync(bsdtar, ["-a", "-c", "-f", tmpZip, "-C", out, "."], { stdio: "inherit" });
   } else {
-    execFileSync("zip", ["-r", "-q", zip, "."], { cwd: out, stdio: "inherit" });
+    execFileSync("zip", ["-r", "-q", tmpZip, "."], { cwd: out, stdio: "inherit" });
   }
-  console.log(`✔ ${zip}`);
+  let result = tmpZip;
+  if (name === "firefox") {
+    result = `${base}.xpi`;
+    renameSync(tmpZip, result);
+  }
+  console.log(`✔ ${result}`);
 }

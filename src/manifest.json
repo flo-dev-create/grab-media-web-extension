@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Grab Media",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Récupère tous les médias (images, vidéos, audios) d'une page et permet de les télécharger en une fois.",
   "permissions": ["activeTab", "scripting", "downloads", "storage"],
   "host_permissions": ["<all_urls>"],

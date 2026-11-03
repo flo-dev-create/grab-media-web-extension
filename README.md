@@ -16,13 +16,16 @@ Cliquez sur l'icône de l'extension sur la page à analyser → une fenêtre s'o
 
 Téléchargez les paquets depuis les [Releases](../../releases).
 
-- **Chrome / Edge** : décompressez `grab-media-chrome-vX.Y.Z.zip`, ouvrez `chrome://extensions`, activez le mode développeur, « Charger l'extension non empaquetée ».
-- **Firefox** : ouvrez `about:debugging#/runtime/this-firefox`, « Charger un module complémentaire temporaire… » et choisissez `grab-media-firefox-vX.Y.Z.zip`.
+- **Chrome / Edge / Brave** : décompressez `grab-media-chrome-vX.Y.Z.zip` dans un dossier, ouvrez `chrome://extensions`, activez le mode développeur, puis « Charger l'extension non empaquetée » et choisissez ce dossier. (Chrome n'autorise pas l'installation d'un .crx hors Chrome Web Store.)
+- **Firefox** : ouvrez `grab-media-firefox-vX.Y.Z.xpi` dans Firefox (glisser-déposer) pour l'installer. Le .xpi n'est installable de façon permanente que s'il est signé par Mozilla (voir ci-dessous) ; sinon, utilisez `about:debugging#/runtime/this-firefox` → « Charger un module complémentaire temporaire… ».
+
+### Signature Firefox (une fois)
+Créez des clés API sur https://addons.mozilla.org/developers/addon/api/key/ puis ajoutez-les dans les secrets du dépôt : `AMO_JWT_ISSUER` et `AMO_JWT_SECRET`. Le workflow signe alors automatiquement le .xpi (distribution non listée).
 
 ## Développement
 
 ```sh
-node scripts/build.mjs   # génère dist/chrome, dist/firefox et les zip
+node scripts/build.mjs   # génère dist/chrome, dist/firefox, le .zip Chrome et le .xpi Firefox
 ```
 
 Les sources sont dans `src/`. Le manifest source contient les clés des deux navigateurs ; le build retire celles qui ne s'appliquent pas.
